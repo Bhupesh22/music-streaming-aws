@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Streaming App</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="file"] {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            display: none; /* Hidden by default */
+        }
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #4CAF50; /* Green */
+            color: white;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            top: 30px;
+            font-size: 17px;
+        }
+        .toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+        @keyframes fadein {
+            from {top: 0; opacity: 0;} 
+            to {top: 30px; opacity: 1;}
+        }
+        @keyframes fadeout {
+            from {top: 30px; opacity: 1;} 
+            to {top: 0; opacity: 0;}
+        }
+        #musicTable {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload Music</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="music_file" accept=".mp3" required>
+        <input type="text" name="playlist_id" placeholder="Playlist ID" required>
+        <button type="submit">Upload</button>
+    </form>
+    <div id="message"></div>
+
+    <h1>Playlists</h1>
+    <input type="text" id="playlistInput" placeholder="Enter Playlist ID">
+    <button id="loadMusic">Load Music</button>
+    <div id="musicTable"></div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Music uploaded successfully!</div>
+
+    <script>
+        $(document).ready(function() {
+            $('#uploadForm').on('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                $.ajax({
+                    url: '/upload',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response) {
+                        $('#message').text(response).show();
+                        showToast(); // Show toast on success
+                    },
+                    error: function(xhr) {
+                        $('#message').text(xhr.responseText).show();
+                    }
+                });
+            });
+
+            $('#loadMusic').on('click', function() {
+                const playlistId = $('#playlistInput').val();
+                $.get(`/playlist/${playlistId}`, function(data) {
+                    if (Array.isArray(data.music)) {
+                        let musicListHTML = `<h2>Playlist: ${playlistId}</h2><ul>`;
+                        data.music.forEach(item => {
+                            musicListHTML += `<li>
+                                <audio controls>
+                                    <source src="${item.music_url}" type="audio/mp3">
+                                    Your browser does not support the audio tag.
+                                </audio>
+                            </li>`;
+                        });
+                        musicListHTML += '</ul>';
+                        $('#musicTable').html(musicListHTML);
+                    } else {
+                        $('#musicTable').html('<p>No music found in this playlist.</p>');
+                    }
+                }).fail(function(xhr) {
+                    $('#musicTable').html('<p>Error loading music: ' + xhr.responseText + '</p>');
+                });
+            });
+
+            function showToast() {
+                const toast = $('#toast');
+                toast.addClass('show');
+                setTimeout(function() {
+                    toast.removeClass('show');
+                }, 3000); // Hide toast after 3 seconds
+            }
+        });
+    </script>
+</body>
+</html>
